@@ -41,15 +41,17 @@ class Authentication {
   /// THE LOCAL LOGIN METHOD: Authenticates via local DB hashes
   Future<bool> loginWithPassword({required String email, required String password}) async {
     // try {
-      final rawUserMap = await User.helper.fetchByField('email', email);
+      final rawUserMap = await User.gHelper.fetchByField('email', email);
       if (rawUserMap == null) return false; // Email not found locally
 
       final storedHash = rawUserMap['password_hash'] as String?;
 
+      print('password_hash: $storedHash');
+
       final isMatch = User.verifyPassword(password, storedHash);
       if (!isMatch) return false;
 
-      _currentUser = User.helper.fromMap(rawUserMap);
+      _currentUser = User.gHelper.fromMap(rawUserMap);
 
       // Connect to AuthStorageService to lock session across app relaunches
       // Generate a temporary mock local session token or UUIDv7 for security
@@ -78,7 +80,7 @@ class Authentication {
     final String rawJwt = jwtClaims['raw_jwt_token'] as String;
 
     // 2. Check if this Google user already exists in your local sqflite DB
-    var localUserMap = await User.helper.fetchByField('email', email);
+    var localUserMap = await User.gHelper.fetchByField('email', email);
 
     late User user;
 
@@ -94,12 +96,12 @@ class Authentication {
 
       // Save the newly minted Google Profile into sqflite
       // (Assuming you have an insertUser method in your dbService)
-      await User.helper.insert(user);
+      await User.gHelper.insert(user);
     } else {
       // User exists: Re-instantiate from your sqflite cache
-      user = User.helper.fromMap(localUserMap);
+      user = User.gHelper.fromMap(localUserMap);
       user.trackNewLogin(); // Update lastLoginAt timestamp
-      await User.helper.update(user);
+      await User.gHelper.update(user);
     }
 
     _currentUser = user;
@@ -127,7 +129,7 @@ class Authentication {
     final String rawToken = profileData['raw_token'] as String;
 
     // 2. Query sqflite user data structures
-    var localUserMap = await User.helper.fetchByField('email', email);
+    var localUserMap = await User.gHelper.fetchByField('email', email);
     late User user;
 
     if (localUserMap == null) {
@@ -142,12 +144,12 @@ class Authentication {
 
       // Save the newly minted Google Profile into sqflite
       // (Assuming you have an insertUser method in your dbService)
-      await User.helper.insert(user);
+      await User.gHelper.insert(user);
     } else {
       // User exists: Re-instantiate from your sqflite cache
-      user = User.helper.fromMap(localUserMap);
+      user = User.gHelper.fromMap(localUserMap);
       user.trackNewLogin(); // Update lastLoginAt timestamp
-      await User.helper.update(user);
+      await User.gHelper.update(user);
     }
 
     _currentUser = user;
