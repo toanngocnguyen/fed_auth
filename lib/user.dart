@@ -21,7 +21,7 @@ class User extends FedObject {
 
   // Primary Generative Constructor
   User({
-    FedStorageService? storage,
+    FedModelHelper? model,
     super.id,
     this.email = '',
     this.isEmailVerified = false,
@@ -36,22 +36,18 @@ class User extends FedObject {
     DateTime? lastLoginAt,
   }) : createdAt = createdAt ?? DateTime.now(),
        lastLoginAt = lastLoginAt ?? DateTime.now(),
-       super(storage: storage ?? User.storageService);
+       super(model: model ?? User.modelHelper);
 
-  static final FedStorageService<User> storageService =
-      FedStorageService.makeStorageService(
-        createNew: (FedStorageService storage) => User(storage: storage),
+  static final FedModelHelper<User> modelHelper =
+      FedModelHelper.makeModelHelper(
+        createNew: (FedModelHelper storage) => User(model: storage),
         tableName: 'fed_user',
       );
 
   @override
   Future<String?> save({Set<String>? included, Set<String>? excluded}) async {
     // Check email existed
-    bool existed = await User.storageService.isExistsByField(
-      id,
-      "email",
-      email,
-    );
+    bool existed = await User.modelHelper.isExistsByField(id, "email", email);
 
     if (existed) {
       throw Exception('email existed, please check it before calling save');
@@ -66,25 +62,25 @@ class User extends FedObject {
   @override
   Map<String, dynamic> toMap({Set<String>? included, Set<String>? excluded}) {
     return {
-      if (storage.incExc('id', included, excluded)) 'id': id,
-      if (storage.incExc('email', included, excluded)) 'email': email,
-      if (storage.incExc('isEmailVerified', included, excluded))
+      if (model.incExc('id', included, excluded)) 'id': id,
+      if (model.incExc('email', included, excluded)) 'email': email,
+      if (model.incExc('isEmailVerified', included, excluded))
         'is_email_verified': isEmailVerified
             ? 1
             : 0, // SQLite lacks boolean types
       // if (myHelper.incExc('passwordHash', included, excluded)) 'password_hash': email,
-      if (storage.incExc('fullName', included, excluded)) 'full_name': fullName,
-      if (storage.incExc('photoUrl', included, excluded)) 'photo_url': photoUrl,
-      if (storage.incExc('phoneNumber', included, excluded))
+      if (model.incExc('fullName', included, excluded)) 'full_name': fullName,
+      if (model.incExc('photoUrl', included, excluded)) 'photo_url': photoUrl,
+      if (model.incExc('phoneNumber', included, excluded))
         'phone_number': phoneNumber,
-      if (storage.incExc('role', included, excluded)) 'role': role,
-      if (storage.incExc('providerId', included, excluded))
+      if (model.incExc('role', included, excluded)) 'role': role,
+      if (model.incExc('providerId', included, excluded))
         'provider_id': providerId,
-      if (storage.incExc('isTwoFactorEnabled', included, excluded))
+      if (model.incExc('isTwoFactorEnabled', included, excluded))
         'is_two_factor_enabled': isTwoFactorEnabled ? 1 : 0,
-      if (storage.incExc('createdAt', included, excluded))
+      if (model.incExc('createdAt', included, excluded))
         'created_at': createdAt.toIso8601String(),
-      if (storage.incExc('lastLoginAt', included, excluded))
+      if (model.incExc('lastLoginAt', included, excluded))
         'last_login_at': lastLoginAt.toIso8601String(),
     };
   }
@@ -120,11 +116,11 @@ class User extends FedObject {
   }
 
   Future _createTable(Database db, int version) async {
-    bool bExisted = await FedDBManager.isTableExists(db, storage.tableName);
+    bool bExisted = await FedDBManager.isTableExists(db, model.tableName);
 
     if (!bExisted) {
       await db.execute('''
-      CREATE TABLE ${storage.tableName} (
+      CREATE TABLE ${model.tableName} (
         id TEXT PRIMARY KEY NOT NULL, -- Built for UUIDv7 sequential ordering
         email TEXT UNIQUE NULL,
         is_email_verified INTEGER NOT NULL DEFAULT 0, -- 0 for false, 1 for true
@@ -151,12 +147,12 @@ class User extends FedObject {
   String toString() => 'User(id: $id, email: $email, provider: $providerId)';
 
   Future<int> setPassword(String password) async {
-    Database db = await storage.getDatabase();
+    Database db = await model.getDatabase();
 
     String passwordHash = User.hashPassword(password);
 
     return await db.update(
-      storage.tableName,
+      model.tableName,
       {"password_hash": passwordHash},
       where: 'id = ?',
       whereArgs: [id],
