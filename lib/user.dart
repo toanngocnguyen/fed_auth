@@ -21,7 +21,7 @@ class User extends FedObject {
 
   // Primary Generative Constructor
   User({
-    FedObjectHelper? myHelper,
+    FedStorageService? storage,
     super.id,
     this.email = '',
     this.isEmailVerified = false,
@@ -36,61 +36,76 @@ class User extends FedObject {
     DateTime? lastLoginAt,
   }) : createdAt = createdAt ?? DateTime.now(),
        lastLoginAt = lastLoginAt ?? DateTime.now(),
-       super(myHelper: myHelper ?? User.gHelper);
+       super(storage: storage ?? User.storageService);
 
-  static final FedObjectHelper<User> gHelper = FedObjectHelper.makeHelper(
-    createNew: (FedObjectHelper helper) => User(myHelper: helper),
-    tableName: 'fed_user',
-  );
+  static final FedStorageService<User> storageService =
+      FedStorageService.makeStorageService(
+        createNew: (FedStorageService storage) => User(storage: storage),
+        tableName: 'fed_user',
+      );
 
   @override
   Future<String?> save({Set<String>? included, Set<String>? excluded}) async {
     // Check email existed
-    bool existed = await User.gHelper.isExistsByField(id, "email", email);
+    bool existed = await User.storageService.isExistsByField(
+      id,
+      "email",
+      email,
+    );
 
-    if (existed){
+    if (existed) {
       throw Exception('email existed, please check it before calling save');
     }
 
     if (excluded != null && !excluded.contains('email')) excluded.add('email');
 
-    return await super.save(included:included, excluded: excluded);
+    return await super.save(included: included, excluded: excluded);
   }
 
   // Serialize instance to Map structure for storage in sqflite
   @override
   Map<String, dynamic> toMap({Set<String>? included, Set<String>? excluded}) {
     return {
-      if (myHelper.incExc('id', included, excluded)) 'id': id,
-      if (myHelper.incExc('email', included, excluded)) 'email': email,
-      if (myHelper.incExc('isEmailVerified', included, excluded)) 'is_email_verified': isEmailVerified ? 1 : 0, // SQLite lacks boolean types
+      if (storage.incExc('id', included, excluded)) 'id': id,
+      if (storage.incExc('email', included, excluded)) 'email': email,
+      if (storage.incExc('isEmailVerified', included, excluded))
+        'is_email_verified': isEmailVerified
+            ? 1
+            : 0, // SQLite lacks boolean types
       // if (myHelper.incExc('passwordHash', included, excluded)) 'password_hash': email,
-      if (myHelper.incExc('fullName', included, excluded)) 'full_name': fullName,
-      if (myHelper.incExc('photoUrl', included, excluded)) 'photo_url': photoUrl,
-      if (myHelper.incExc('phoneNumber', included, excluded)) 'phone_number': phoneNumber,
-      if (myHelper.incExc('role', included, excluded)) 'role': role,
-      if (myHelper.incExc('providerId', included, excluded)) 'provider_id': providerId,
-      if (myHelper.incExc('isTwoFactorEnabled', included, excluded)) 'is_two_factor_enabled': isTwoFactorEnabled ? 1 : 0,
-      if (myHelper.incExc('createdAt', included, excluded)) 'created_at': createdAt.toIso8601String(),
-      if (myHelper.incExc('lastLoginAt', included, excluded)) 'last_login_at': lastLoginAt.toIso8601String(),
+      if (storage.incExc('fullName', included, excluded)) 'full_name': fullName,
+      if (storage.incExc('photoUrl', included, excluded)) 'photo_url': photoUrl,
+      if (storage.incExc('phoneNumber', included, excluded))
+        'phone_number': phoneNumber,
+      if (storage.incExc('role', included, excluded)) 'role': role,
+      if (storage.incExc('providerId', included, excluded))
+        'provider_id': providerId,
+      if (storage.incExc('isTwoFactorEnabled', included, excluded))
+        'is_two_factor_enabled': isTwoFactorEnabled ? 1 : 0,
+      if (storage.incExc('createdAt', included, excluded))
+        'created_at': createdAt.toIso8601String(),
+      if (storage.incExc('lastLoginAt', included, excluded))
+        'last_login_at': lastLoginAt.toIso8601String(),
     };
   }
 
   // Factory Constructor to map data retrieved from sqflite
   @override
   loadMap(Map<String, dynamic> map) {
-      id = (map['id'] as String?) ?? '';
-      email = map['email'] as String?;
-      passwordHash = map['password_hash'] as String?;
-      isEmailVerified = (map['is_email_verified'] as int) == 1;
-      fullName = map['full_name'] as String?;
-      photoUrl = map['photo_url'] as String?;
-      phoneNumber = map['phone_number'] as String?;
-      role = map['role'] as String?;
-      providerId = map['provider_id'] as String?;
-      isTwoFactorEnabled = (map['is_two_factor_enabled'] as int) == 1;
-      createdAt = DateTime.parse((map['created_at'] as String?) ?? '1900-01-01');
-      lastLoginAt = DateTime.parse((map['last_login_at'] as String?) ?? '1900-01-01');
+    id = (map['id'] as String?) ?? '';
+    email = map['email'] as String?;
+    passwordHash = map['password_hash'] as String?;
+    isEmailVerified = (map['is_email_verified'] as int) == 1;
+    fullName = map['full_name'] as String?;
+    photoUrl = map['photo_url'] as String?;
+    phoneNumber = map['phone_number'] as String?;
+    role = map['role'] as String?;
+    providerId = map['provider_id'] as String?;
+    isTwoFactorEnabled = (map['is_two_factor_enabled'] as int) == 1;
+    createdAt = DateTime.parse((map['created_at'] as String?) ?? '1900-01-01');
+    lastLoginAt = DateTime.parse(
+      (map['last_login_at'] as String?) ?? '1900-01-01',
+    );
   }
 
   // --- Metadata definition ---
@@ -105,14 +120,11 @@ class User extends FedObject {
   }
 
   Future _createTable(Database db, int version) async {
-    bool bExisted = await FedDBManager.isTableExists(
-      db,
-      myHelper.tableName,
-    );
+    bool bExisted = await FedDBManager.isTableExists(db, storage.tableName);
 
     if (!bExisted) {
       await db.execute('''
-      CREATE TABLE ${myHelper.tableName} (
+      CREATE TABLE ${storage.tableName} (
         id TEXT PRIMARY KEY NOT NULL, -- Built for UUIDv7 sequential ordering
         email TEXT UNIQUE NULL,
         is_email_verified INTEGER NOT NULL DEFAULT 0, -- 0 for false, 1 for true
@@ -139,12 +151,12 @@ class User extends FedObject {
   String toString() => 'User(id: $id, email: $email, provider: $providerId)';
 
   Future<int> setPassword(String password) async {
-    Database db = await myHelper.getDatabase();
+    Database db = await storage.getDatabase();
 
     String passwordHash = User.hashPassword(password);
 
     return await db.update(
-      myHelper.tableName,
+      storage.tableName,
       {"password_hash": passwordHash},
       where: 'id = ?',
       whereArgs: [id],
@@ -157,7 +169,10 @@ class User extends FedObject {
 
   /// Compares an incoming plain-text password against a stored secure hash.
   /// returns true if they match.
-  static bool verifyPassword(String? plainTextPassword, String? hashedWithSalt) {
+  static bool verifyPassword(
+    String? plainTextPassword,
+    String? hashedWithSalt,
+  ) {
     return PasswordHasher.verify(plainTextPassword, hashedWithSalt);
   }
 

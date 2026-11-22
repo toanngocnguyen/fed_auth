@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'google_auth_service.dart';
 import 'facebook_auth_service.dart';
 
@@ -7,10 +8,9 @@ import 'user.dart';
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
 class Authentication {
-
   static final Authentication _instance = Authentication.createNew();
 
-  factory Authentication(){
+  factory Authentication() {
     return _instance;
   }
 
@@ -39,29 +39,32 @@ class Authentication {
   bool get isLogined => _status == AuthStatus.authenticated;
 
   /// THE LOCAL LOGIN METHOD: Authenticates via local DB hashes
-  Future<bool> loginWithPassword({required String email, required String password}) async {
+  Future<bool> loginWithPassword({
+    required String email,
+    required String password,
+  }) async {
     // try {
-      final rawUserMap = await User.gHelper.fetchByField('email', email);
-      if (rawUserMap == null) return false; // Email not found locally
+    final rawUserMap = await User.storageService.fetchByField('email', email);
+    if (rawUserMap == null) return false; // Email not found locally
 
-      final storedHash = rawUserMap['password_hash'] as String?;
+    final storedHash = rawUserMap['password_hash'] as String?;
 
-      print('password_hash: $storedHash');
+    print('password_hash: $storedHash');
 
-      final isMatch = User.verifyPassword(password, storedHash);
-      if (!isMatch) return false;
+    final isMatch = User.verifyPassword(password, storedHash);
+    if (!isMatch) return false;
 
-      _currentUser = User.gHelper.fromMap(rawUserMap);
+    _currentUser = User.storageService.fromMap(rawUserMap);
 
-      // Connect to AuthStorageService to lock session across app relaunches
-      // Generate a temporary mock local session token or UUIDv7 for security
-      await _sessionStorage.saveSession(
-        token: 'local_secure_session_${_currentUser!.id}',
-        userId: _currentUser!.id!,
-      );
+    // Connect to AuthStorageService to lock session across app relaunches
+    // Generate a temporary mock local session token or UUIDv7 for security
+    await _sessionStorage.saveSession(
+      token: 'local_secure_session_${_currentUser!.id}',
+      userId: _currentUser!.id!,
+    );
 
-      _status = AuthStatus.authenticated;
-      return true;
+    _status = AuthStatus.authenticated;
+    return true;
     // } catch (e) {
     //   print('Local login execution failure: $e');
     //   return false;
@@ -80,7 +83,7 @@ class Authentication {
     final String rawJwt = jwtClaims['raw_jwt_token'] as String;
 
     // 2. Check if this Google user already exists in your local sqflite DB
-    var localUserMap = await User.gHelper.fetchByField('email', email);
+    var localUserMap = await User.storageService.fetchByField('email', email);
 
     late User user;
 
@@ -96,12 +99,12 @@ class Authentication {
 
       // Save the newly minted Google Profile into sqflite
       // (Assuming you have an insertUser method in your dbService)
-      await User.gHelper.insert(user);
+      await User.storageService.insert(user);
     } else {
       // User exists: Re-instantiate from your sqflite cache
-      user = User.gHelper.fromMap(localUserMap);
+      user = User.storageService.fromMap(localUserMap);
       user.trackNewLogin(); // Update lastLoginAt timestamp
-      await User.gHelper.update(user);
+      await User.storageService.update(user);
     }
 
     _currentUser = user;
@@ -129,7 +132,7 @@ class Authentication {
     final String rawToken = profileData['raw_token'] as String;
 
     // 2. Query sqflite user data structures
-    var localUserMap = await User.gHelper.fetchByField('email', email);
+    var localUserMap = await User.storageService.fetchByField('email', email);
     late User user;
 
     if (localUserMap == null) {
@@ -144,12 +147,12 @@ class Authentication {
 
       // Save the newly minted Google Profile into sqflite
       // (Assuming you have an insertUser method in your dbService)
-      await User.gHelper.insert(user);
+      await User.storageService.insert(user);
     } else {
       // User exists: Re-instantiate from your sqflite cache
-      user = User.gHelper.fromMap(localUserMap);
+      user = User.storageService.fromMap(localUserMap);
       user.trackNewLogin(); // Update lastLoginAt timestamp
-      await User.gHelper.update(user);
+      await User.storageService.update(user);
     }
 
     _currentUser = user;
@@ -181,7 +184,10 @@ class AuthStorageService {
   static const _keyUserId = 'auth_user_id';
 
   /// Save authentication session details upon successful login
-  Future<void> saveSession({required String token, required String userId}) async {
+  Future<void> saveSession({
+    required String token,
+    required String userId,
+  }) async {
     await _secureStorage.write(key: _keyToken, value: token);
     await _secureStorage.write(key: _keyUserId, value: userId);
   }
@@ -202,11 +208,3 @@ class AuthStorageService {
     await _secureStorage.delete(key: _keyUserId);
   }
 }
-
-
-
-
-
-
-
-
