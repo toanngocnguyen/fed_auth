@@ -15,7 +15,7 @@ dependencies:
     path: ../fedfer
   flutter_secure_storage:
   google_sign_in:
-  flutter_facebook_auth: ^7.3.2
+  # flutter_facebook_auth: ^7.3.2
   jwt_decoder:
   uuid:
   bcrypt:

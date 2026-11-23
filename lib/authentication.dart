@@ -1,7 +1,7 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'google_auth_service.dart';
-import 'facebook_auth_service.dart';
+// import 'facebook_auth_service.dart_nw';
 
 import 'user.dart';
 
@@ -18,7 +18,7 @@ class Authentication {
 
   final AuthStorageService _sessionStorage = AuthStorageService();
   final GoogleAuthService _googleAuthService = GoogleAuthService();
-  final FacebookAuthService _facebookAuthService = FacebookAuthService();
+  // final FacebookAuthService _facebookAuthService = FacebookAuthService();
 
   AuthStatus _status = AuthStatus.unknown;
   User? _currentUser; // Holds active profile in memory
@@ -121,53 +121,53 @@ class Authentication {
   }
 
   /// THE FACEBOOK AUTH INGESTION LOOP
-  Future<bool> loginWithFacebook() async {
-    // 1. Execute login sheet operations
-    final profileData = await _facebookAuthService.authenticateWithFacebook();
-    if (profileData == null) return false;
+  // Future<bool> loginWithFacebook() async {
+  //   // 1. Execute login sheet operations
+  //   final profileData = await _facebookAuthService.authenticateWithFacebook();
+  //   if (profileData == null) return false;
 
-    final String email = profileData['email'] as String;
-    final String displayName = profileData['name'] as String;
-    final String? photoUrl = profileData['picture'] as String?;
-    final String rawToken = profileData['raw_token'] as String;
+  //   final String email = profileData['email'] as String;
+  //   final String displayName = profileData['name'] as String;
+  //   final String? photoUrl = profileData['picture'] as String?;
+  //   final String rawToken = profileData['raw_token'] as String;
 
-    // 2. Query sqflite user data structures
-    var localUserMap = await User.modelHelper.fetchByField('email', email);
-    late User user;
+  //   // 2. Query sqflite user data structures
+  //   var localUserMap = await User.modelHelper.fetchByField('email', email);
+  //   late User user;
 
-    if (localUserMap == null) {
-      // User is completely new: Initialize a new model using UUIDv7
-      user = User(
-        email: email,
-        fullName: displayName,
-        photoUrl: photoUrl,
-        providerId: 'facebook.com',
-        isEmailVerified: true,
-      );
+  //   if (localUserMap == null) {
+  //     // User is completely new: Initialize a new model using UUIDv7
+  //     user = User(
+  //       email: email,
+  //       fullName: displayName,
+  //       photoUrl: photoUrl,
+  //       providerId: 'facebook.com',
+  //       isEmailVerified: true,
+  //     );
 
-      // Save the newly minted Google Profile into sqflite
-      // (Assuming you have an insertUser method in your dbService)
-      await User.modelHelper.insert(user);
-    } else {
-      // User exists: Re-instantiate from your sqflite cache
-      user = User.modelHelper.fromMap(localUserMap);
-      user.trackNewLogin(); // Update lastLoginAt timestamp
-      await User.modelHelper.update(user);
-    }
+  //     // Save the newly minted Google Profile into sqflite
+  //     // (Assuming you have an insertUser method in your dbService)
+  //     await User.modelHelper.insert(user);
+  //   } else {
+  //     // User exists: Re-instantiate from your sqflite cache
+  //     user = User.modelHelper.fromMap(localUserMap);
+  //     user.trackNewLogin(); // Update lastLoginAt timestamp
+  //     await User.modelHelper.update(user);
+  //   }
 
-    _currentUser = user;
+  //   _currentUser = user;
 
-    // 3. Persist Facebook authentication payload string inside secure system memory
-    await _sessionStorage.saveSession(
-      token: rawToken,
-      userId: _currentUser!.id!,
-    );
+  //   // 3. Persist Facebook authentication payload string inside secure system memory
+  //   await _sessionStorage.saveSession(
+  //     token: rawToken,
+  //     userId: _currentUser!.id!,
+  //   );
 
-    // 4. Update state
-    _status = AuthStatus.authenticated;
+  //   // 4. Update state
+  //   _status = AuthStatus.authenticated;
 
-    return true;
-  }
+  //   return true;
+  // }
 
   // Logout Flow
   Future<void> logout() async {
