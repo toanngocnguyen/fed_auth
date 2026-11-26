@@ -139,7 +139,7 @@ class User extends FedObject {
       // default admin user
       User admin = User(email: 'admin');
       await admin.save();
-      await admin.setPassword('admin');
+      await admin.setPassword('admin369');
     }
   }
 
